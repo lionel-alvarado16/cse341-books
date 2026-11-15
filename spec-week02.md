@@ -410,9 +410,9 @@ Purpose: Create a new author.
 Request body:
 
     {
-        "id": "a3",
-        "name": "J.R.R. Tolkien",
-        "birthYear": 1892
+        "id": "a4",
+        "name": "Example Author",
+        "birthYear": 1980
     }
 
 Success:
@@ -421,7 +421,6 @@ Success:
 
 Errors:
 - `400` if a required field is missing
-- `400` if `id` or `name` is not a string, or `birthYear` is not an integer
 - `409` if an author with the same `id` already exists
 - `500` if an unexpected server or database error occurs
 
@@ -432,7 +431,7 @@ Request body:
 
     {
         "name": "Updated Author Name",
-        "birthYear": 1900
+        "birthYear": 1981
     }
 
 Success:
@@ -442,14 +441,13 @@ Success:
 Response body example:
 
     {
-        "id": "a3",
+        "id": "a4",
         "name": "Updated Author Name",
-        "birthYear": 1900
+        "birthYear": 1981
     }
 
 Errors:
 - `400` if a required field is missing
-- `400` if `name` is not a string or `birthYear` is not an integer
 - `404` if no author exists with that id
 - `500` if an unexpected server or database error occurs
 
@@ -465,6 +463,23 @@ Errors:
 - `409` if the author still has books assigned to it (books with a matching `authorId`). The author is not deleted.
 - `500` if an unexpected server or database error occurs
 
+### Error Handling
+- Do not return stack traces to clients.
+- Errors return a JSON body with a `message`:
+    - `400`: { "message": "Missing required field" }
+    - `404`: { "message": "Author not found" }
+    - `409`: { "message": "Id already exists" } or { "message": "Cannot delete author with assigned books" }
+    - `500`: { "message": "Internal server error" } (GET routes), { "message": "Unable to create author" } (POST), { "message": "Unable to update author" } (PUT) or { "message": "Unable to delete author" } (DELETE)
+- `id` and `name` are missing if they are not sent or are empty. `birthYear` is missing if it is not sent.
+- Only the fields in the data model are saved. Extra fields in the request body are ignored.
+
+### Implementation Notes
+- Use a MongoDB collection named `authors`.
+- Create a unique index on `id` in the `authors` collection (one-time step in MongoDB Atlas).
+- Seed the `authors` collection before the `books` collection, so every `authorId` used by a book matches an existing author.
+- Before deleting an author, check if at least one book has that `authorId`.
+- Use environment variables for the MongoDB connection, locally and in Render.
+
 ### Swagger Documentation
 Swagger must document every author route. Each route must include the `id` parameter (where it applies), the request body example (POST and PUT), and every status code listed in this spec.
 
@@ -476,20 +491,20 @@ Applies to both books and authors.
 
 - Do not return stack traces to clients.
 - Errors return a JSON body with a `message`:
-    - `400`: { "message": "Missing required field" }, { "message": "Invalid field value" } or { "message": "Author does not exist" }
+    - `400`: { "message": "Missing required field" } or { "message": "Author does not exist" }
     - `404`: { "message": "Book not found" } or { "message": "Author not found" }
     - `409`: { "message": "Id already exists" } or { "message": "Cannot delete author with assigned books" }
-    - `500`: { "message": "Internal server error" }
-- A required field is missing if it is not sent, is `null`, or is an empty string.
+    - `500`: { "message": "Internal server error" } (GET routes) or { "message": "Unable to create/update/delete author" } and { "message": "Unable to create/update/delete book" } (POST, PUT and DELETE routes)
+- A required text field (`id`, `name`, `authorId`, `title`, `publicationDate`) is missing if it is not sent or is empty. `birthYear` is missing if it is not sent.
 - Only the fields in the data model are saved. Extra fields in the request body are ignored.
 
 ## Implementation Notes
 - Use MongoDB collections named `books` and `authors`.
-- Create a unique index on `id` in both collections so two documents cannot have the same id.
+- Create a unique index on `id` in both collections so two documents cannot have the same id (one-time step in MongoDB Atlas).
 - Seed the `authors` collection first, then the `books` collection (books use the `authorId` of the seeded authors). Replace the old `author` name field in the Week 01 books with `authorId`.
-- Check that the values sent in the request body are the right type before using them in a MongoDB query.
 - Use environment variables for the MongoDB connection, locally and in Render.
 
 ## Out of Scope for Week 2
 - Authentication and authorization
 - Pagination, search and filters
+- Validation of field types and formats (for example, `birthYear` as an integer or `publicationDate` as `YYYY-MM-DD`)
