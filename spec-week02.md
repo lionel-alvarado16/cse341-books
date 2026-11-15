@@ -292,7 +292,6 @@ Success:
 
 Errors:
 - `400` if a required field is missing
-- `400` if a field has the wrong type (all fields must be strings) or `publicationDate` is not in `YYYY-MM-DD` format
 - `400` if the `authorId` does not match an existing author
 - `409` if a book with the same `id` already exists
 - `500` if an unexpected server or database error occurs
@@ -323,7 +322,6 @@ Response body example:
 
 Errors:
 - `400` if a required field is missing
-- `400` if a field has the wrong type or `publicationDate` is not in `YYYY-MM-DD` format
 - `400` if the `authorId` does not match an existing author
 - `404` if no book exists with that id
 - `500` if an unexpected server or database error occurs
@@ -338,6 +336,22 @@ Success:
 Errors:
 - `404` if no book exists with that id
 - `500` if an unexpected server or database error occurs
+
+### Error Handling
+- Do not return stack traces to clients.
+- Errors return a JSON body with a `message`:
+    - `400`: { "message": "Missing required field" } or { "message": "Author does not exist" }
+    - `404`: { "message": "Book not found" }
+    - `409`: { "message": "Id already exists" }
+    - `500`: { "message": "Internal server error" } (GET routes), { "message": "Unable to create book" } (POST), { "message": "Unable to update book" } (PUT) or { "message": "Unable to delete book" } (DELETE)
+- A required field is missing if it is not sent, is `null`, or is an empty string.
+- Only the fields in the data model are saved. Extra fields in the request body are ignored.
+
+### Implementation Notes
+- Create a unique index on `id` in the `books` collection (one-time step in MongoDB Atlas).
+- Seed the `authors` collection first, then update the `books` collection to use `authorId` instead of the Week 01 `author` name field.
+- Before creating or updating a book, check that the submitted `authorId` matches an existing author.
+- Use environment variables for the MongoDB connection, locally and in Render.
 
 ### Swagger Documentation
 Swagger must document every book route. Each route must include the `id` parameter (where it applies), the request body example (POST and PUT), and every status code listed in this spec.
@@ -491,10 +505,10 @@ Applies to both books and authors.
 
 - Do not return stack traces to clients.
 - Errors return a JSON body with a `message`:
-    - `400`: { "message": "Missing required field" } or { "message": "Author does not exist" }
+    - `400`: { "message": "Missing required field" } or { "message": "Author does not exist" } (when the `authorId` of a book does not match an existing author)
     - `404`: { "message": "Book not found" } or { "message": "Author not found" }
     - `409`: { "message": "Id already exists" } or { "message": "Cannot delete author with assigned books" }
-    - `500`: { "message": "Internal server error" } (GET routes) or { "message": "Unable to create/update/delete author" } and { "message": "Unable to create/update/delete book" } (POST, PUT and DELETE routes)
+    - `500`: { "message": "Internal server error" } (GET routes), { "message": "Unable to create book" } or { "message": "Unable to create author" } (POST), { "message": "Unable to update book" } or { "message": "Unable to update author" } (PUT), { "message": "Unable to delete book" } or { "message": "Unable to delete author" } (DELETE)
 - A required text field (`id`, `name`, `authorId`, `title`, `publicationDate`) is missing if it is not sent or is empty. `birthYear` is missing if it is not sent.
 - Only the fields in the data model are saved. Extra fields in the request body are ignored.
 
@@ -502,6 +516,8 @@ Applies to both books and authors.
 - Use MongoDB collections named `books` and `authors`.
 - Create a unique index on `id` in both collections so two documents cannot have the same id (one-time step in MongoDB Atlas).
 - Seed the `authors` collection first, then the `books` collection (books use the `authorId` of the seeded authors). Replace the old `author` name field in the Week 01 books with `authorId`.
+- Before creating or updating a book, check that the submitted `authorId` matches an existing author.
+- Before deleting an author, check if at least one book has that `authorId`.
 - Use environment variables for the MongoDB connection, locally and in Render.
 
 ## Out of Scope for Week 2

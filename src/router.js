@@ -1,5 +1,11 @@
 import express from 'express';
-import { getBooksHandler, getBookByIdHandler } from './controllers/books.js';
+import {
+    getBooksHandler,
+    getBookByIdHandler,
+    createBook,
+    updateBook,
+    deleteBook
+} from './controllers/books.js';
 import {
     getAllAuthors,
     getAuthorById,
@@ -48,6 +54,130 @@ router.get('/books', getBooksHandler);
  *         description: Unable to retrieve book
  */
 router.get('/books/:id', getBookByIdHandler);
+
+/**
+ * @openapi
+ * /books:
+ *   post:
+ *     summary: Create a new book
+ *     tags:
+ *       - Books
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - id
+ *               - authorId
+ *               - title
+ *               - publicationDate
+ *             properties:
+ *               id:
+ *                 type: string
+ *                 description: The custom book ID
+ *               authorId:
+ *                 type: string
+ *                 description: The ID of the book's author
+ *               title:
+ *                 type: string
+ *                 description: The book title
+ *               publicationDate:
+ *                 type: string
+ *                 format: date
+ *                 description: The book publication date
+ *           example:
+ *             id: b4
+ *             authorId: a1
+ *             title: The Great Adventure
+ *             publicationDate: '2024-05-15'
+ *     responses:
+ *       201:
+ *         description: Book created successfully
+ *       400:
+ *         description: Missing required book fields or author does not exist
+ *       409:
+ *         description: Book ID already exists
+ *       500:
+ *         description: Unable to create book
+ */
+router.post('/books', createBook);
+
+/**
+ * @openapi
+ * /books/{id}:
+ *   put:
+ *     summary: Update a book by ID
+ *     tags:
+ *       - Books
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The book ID.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - authorId
+ *               - title
+ *               - publicationDate
+ *             properties:
+ *               authorId:
+ *                 type: string
+ *                 description: The ID of the book's author
+ *               title:
+ *                 type: string
+ *                 description: The book title
+ *               publicationDate:
+ *                 type: string
+ *                 format: date
+ *                 description: The book publication date
+ *           example:
+ *             authorId: a1
+ *             title: Pride and Prejudice - Updated
+ *             publicationDate: '1813-02-01'
+ *     responses:
+ *       200:
+ *         description: Book updated successfully
+ *       400:
+ *         description: Missing required book fields or author does not exist
+ *       404:
+ *         description: Book not found
+ *       500:
+ *         description: Unable to update book
+ */
+router.put('/books/:id', updateBook);
+
+/**
+ * @openapi
+ * /books/{id}:
+ *   delete:
+ *     summary: Delete a book by ID
+ *     tags:
+ *       - Books
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The book ID.
+ *     responses:
+ *       204:
+ *         description: Book deleted successfully
+ *       404:
+ *         description: Book not found
+ *       500:
+ *         description: Unable to delete book
+ */
+router.delete('/books/:id', deleteBook);
 
 /**
  * @openapi
@@ -119,8 +249,10 @@ router.get('/authors/:id', getAuthorById);
  *     responses:
  *       201:
  *         description: Author created
+ *       400:
+ *         description: Missing required author fields
  *       409:
- *         description: Missing required author fields or author ID already exists
+ *         description: Author ID already exists
  *       500:
  *         description: Unable to create author
  */
